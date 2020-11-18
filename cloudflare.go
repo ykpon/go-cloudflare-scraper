@@ -18,26 +18,29 @@ import (
 
 const userAgent = `Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36`
 
+// Transport struct
 type Transport struct {
 	upstream http.RoundTripper
 	Cookies  http.CookieJar
 }
 
+// NewClient creates a new http client
 func NewClient() (c *http.Client, err error) {
 
-	scraper_transport, err := NewTransport(http.DefaultTransport)
+	scraperTransport, err := NewTransport(http.DefaultTransport)
 	if err != nil {
 		return
 	}
 
 	c = &http.Client{
-		Transport: scraper_transport,
-		Jar:       scraper_transport.cookies,
+		Transport: scraperTransport,
+		Jar:       scraperTransport.Cookies,
 	}
 
 	return
 }
 
+// NewTransport returns a link to Transport struct
 func NewTransport(upstream http.RoundTripper) (*Transport, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
@@ -46,6 +49,7 @@ func NewTransport(upstream http.RoundTripper) (*Transport, error) {
 	return &Transport{upstream, jar}, nil
 }
 
+// RoundTrip returns a response of cloudflare challenge page
 func (t Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if r.Header.Get("User-Agent") == "" {
 		r.Header.Set("User-Agent", userAgent)
@@ -61,8 +65,8 @@ func (t Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	// Check if Cloudflare anti-bot is on
-	server_header := resp.Header.Get("Server")
-	if resp.StatusCode == 503 && (server_header == "cloudflare-nginx" || server_header == "cloudflare") {
+	serverHeader := resp.Header.Get("Server")
+	if resp.StatusCode == 503 && (serverHeader == "cloudflare-nginx" || serverHeader == "cloudflare") {
 		log.Printf("Solving challenge for %s", resp.Request.URL.Hostname())
 		resp, err := t.solveChallenge(resp)
 
